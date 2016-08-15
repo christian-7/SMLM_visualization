@@ -31,11 +31,11 @@ axis([0 1000 0 1000])
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 angle = 1:(360/13):360; % 13 monomers per circle, divide the circle in 13 parts (angles)
-radius = 30;
+radius = 12.5;
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-b = sind(90-angle)*radius; 
+b = cosd(90-angle)*radius; 
 c = radius-b;
 c = c(:);
 
