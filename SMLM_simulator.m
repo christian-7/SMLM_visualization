@@ -10,6 +10,7 @@ line1 = zeros(length_of_line/spacing,2);
 line1(1,:)=[1,1];
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+
 for i = 2:length(line1);
 
 line1(i,1) = line1(i-1,1)+spacing;
@@ -30,8 +31,8 @@ axis([0 1000 0 1000])
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-angle = 1:(360/13):360; % 13 monomers per circle, divide the circle in 13 parts (angles)
-radius = 12.5;
+angle   = 1:(360/13):360;     % 13 monomers per circle, divide the circle in 13 parts (angles)
+radius  = 20;                 % radius of the microtubule (12.5 um) plus the antibody
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -45,7 +46,7 @@ c = c(:);
 
 % Multiply rings n-times
 m = 1;
-n = 4;
+n = 4;      % distance between the monomers
 o = 13;
 
 mol_list = [];
@@ -69,7 +70,7 @@ axis square;
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-labelling_eff = 0.15;
+labelling_eff = 0.3;
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -201,18 +202,18 @@ fprintf(' -- Simulation done after %f sec -- \n',toc)
 figure 
 scatter(mol_list2(:,1),mol_list2(:,2),1,'red');hold on;
 scatter(all_sim_x,all_sim_y,1,'blue')
-axis([0 1000 -50 50]);
-
+axis([0 1000 -50 100]);
 
 %% Render the image
 
-pxlsize=10;
+pxlsize = 5;
 
 heigth = round((max(all_sim_y)-min(all_sim_y))/pxlsize);
 width  = round((max(all_sim_x)-min(all_sim_x))/pxlsize);
        
 rendered = hist3([all_sim_y,all_sim_x],[heigth width]);
 
+figure
 imshow(rendered);
 colormap('hot');
 
