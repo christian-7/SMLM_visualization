@@ -70,7 +70,7 @@ axis square;
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-labelling_eff = 0.3;
+labelling_eff = 0.6;
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -87,7 +87,7 @@ figure
 scatter(mol_list(:,1),mol_list(:,2),5,'*r'); hold on;
 scatter(mol_list2(:,1),mol_list2(:,2),5,'ob');
 axis([0 1000 -50 100]);
-legend('all','subset');
+legend('all molecules','labeled molecules');
 box on;
 axis square
 
@@ -217,12 +217,26 @@ figure
 imshow(rendered);
 colormap('hot');
 
-%% Save image as 32-bit image
+%% Render the GT
 
-name = ['image_' num2str(pxlsize) 'nm_p_pxl.tiff'];
+pxlsize = 5;
+
+heigth = round((max(mol_list2(:,2))-min(mol_list2(:,2)))/pxlsize);
+width  = round((max(mol_list2(:,1))-min(mol_list2(:,1)))/pxlsize);
+       
+rendered = hist3([mol_list2(:,2),mol_list2(:,1)],[heigth width]);.
+renderedG = imgaussfilt(rendered, 1.2);
+
+figure
+imshow(renderedG);
+colormap('hot');
+
+%% Save the ground truth and the image as 32-bit image
+
+name = ['image_GT' num2str(pxlsize) 'nm_p_pxl2.tiff'];
 
 I32=[];
-I32=uint32(rendered);
+I32=uint32(renderedG);
 
 t = Tiff(name,'w');
 
@@ -238,4 +252,9 @@ t.setTag(tagstruct)
 
 t.write(I32);
 t.close()
+
+% Save the ground truth
+
+% save('GT_MT_.mat','mol_list2');
+
 

@@ -3,14 +3,29 @@ clc, clear, close all
 %% Load Data
 
 cd('.\simulated_test_data'); 
-
-load('simulated_MT_3D_radius_20nm_015_wGT.mat')
-peaks = sim_line;
-
+peaks = dlmread('suresim_1localizations.txt',' ',1,0);
 xCol = 1;
 yCol = 2;
 frameCol = 4;
-photonsCol = 3;
+photonsCol = 5;
+
+% cd('.\simulated_test_data'); 
+% peaks = sim_line;
+% xCol = 1;
+% yCol = 2;
+% frameCol = 4;
+% photonsCol = 3;
+
+% cd('.\test_data'); 
+% load('real_Cent_large.mat')
+% peaks = subset2;
+% 
+% xCol = 1;%2
+% yCol = 2;%3
+% frameCol = 4;%5
+% photonsCol = 6;%6
+
+suffix = 'sureSim_1';
 
 
 % filename_peaks2=[filename_peaks '.dat'];
@@ -63,17 +78,18 @@ pos_list(:,4)=peaks(:,frameCol);               % dt in frames
 
 
 %% Track unsing the Crocker, Weeks, and Grier Algorithm (http://www.physics.emory.edu/rweeks/idl/index.html)
+tic
 
-max_disp    = 15;           % in unit of data
+max_disp    = 15;           % in unit of data, 15
 min_pos     = 1;            % good - eliminate if fewer than good valid positions
-gap         = 100;          % mem - number of time steps that a particle can be 'lost' and then recovered again
+gap         = 50;          % mem - number of time steps that a particle can be 'lost' and then recovered again, 100
 quiet       = 1;            % quiet - 1 = no text
 
 
 param=struct('mem',gap,'dim',2,'good',min_pos,'quiet',quiet);
 res=trackGT(pos_list,max_disp,param); % variable XYT, maximum displacement in pxl
 
-fprintf('\n -- Tracking Done --\n')
+fprintf('\n -- Tracking Done after %f sec--\n', toc)
 
 % Output: 
 % 
@@ -175,18 +191,20 @@ fprintf('\n -- Probability assigned --\n')
 % Show a histogram of probability and a scatter with color corresponding to
 % probability
 
+
+
 figure ('Position',[100 500 900 300])
 
 subplot(1,2,1)
-hist(res(:,8),10);
+hist(res(:,8)/max(res(:,8)),10);
 title('Total probability');
 xlabel('probability');
 ylabel('counts');
 axis square
 
 subplot(1,2,2)
-scatter(res(:,1),res(:,2),5,res(:,8),'filled')
-axis([0 1000 -50 100])
+scatter(res(:,1),res(:,2),5,res(:,8)/max(res(:,8)),'filled')
+% axis([0 1000 -50 100])
 colorbar
 box on
 xlabel('x (nm)');
@@ -246,153 +264,13 @@ merged(:,3)=groupedPhotons;
 merged(:,4)=groupedframe;
 merged(:,5)=groupedID;
 
-%% Merging/Weighting points
-
-% Filter by probability
-
-prob_tresh   = 0.8;
-above_thresh = [];
-below_thresh = [];
-
-filter1=find(res(:,8)>prob_tresh);
-filter2=find(res(:,8)<prob_tresh);
-
-above_thresh=res(filter1,1:end);
-below_thresh=res(filter2,1:end);
-
-%% Merge Molecule above treshold
-
-% res1 = x
-% res2 = y
-% res3 = photons
-% res4 = frame
-% res5 = track ID
-% res6 = distance
-% res7 = gap time
-% res8 = probability to be a loc from the track
-
-
-groupedx=[];
-groupedy=[];
-frame=[];
-groupedframe=[];
-groupedID=[];
-groupedPhotons=[];
-Photons=[];
-above_thresh_merged=[];
-
-for index=min(above_thresh(:,5)):max(above_thresh(:,5)); 
-    
-            vx=find(above_thresh(:,5)==index);
-    
-            clusterx=[];
-            clustery=[];
-            clusterxC=[];
-            clusteryC=[];
-                                                   
-            clusterx=above_thresh(vx,1);
-            clustery=above_thresh(vx,2);
-            frame=above_thresh(vx,4);
-            
-            clusterxC=sum(clusterx)/length(clusterx);
-            clusteryC=sum(clustery)/length(clustery);
-            Photons=sum(above_thresh(vx,3));
-            
-            
-            groupedx=vertcat(groupedx,clusterxC);
-            groupedy=vertcat(groupedy,clusteryC);
-            groupedframe=vertcat(groupedframe, round(mean(frame)));
-            groupedID=vertcat(groupedID, index);
-            groupedPhotons=vertcat(groupedPhotons, Photons);
-
-end
-
-
-above_thresh_merged(:,1)=groupedx(~isnan(groupedx));
-above_thresh_merged(:,2)=groupedy(~isnan(groupedy));
-above_thresh_merged(:,3)=groupedPhotons(~isnan(groupedx));
-above_thresh_merged(:,4)=groupedframe(~isnan(groupedframe));;
-above_thresh_merged(:,5)=groupedID(~isnan(groupedx));;
-above_thresh_merged(:,6)=1;
-
-
-fprintf('\n -- Localization above threshold merged --\n')
-
-%% Join Merged Molecules and Locs below threshold
-
-all_locs=zeros(length(above_thresh_merged)+length(below_thresh),4);
-
-% x,y,photons,probablity
-
-all_locs(:,1) = [above_thresh_merged(:,1); below_thresh(:,1)]; 
-all_locs(:,2) = [above_thresh_merged(:,2); below_thresh(:,2)]; 
-all_locs(:,3) = [above_thresh_merged(:,3); below_thresh(:,3)]; 
-all_locs(:,4) = [above_thresh_merged(:,6); below_thresh(:,8)]; 
-
-
-%% Determine the bin for each localization and wheight the pixel acc to the probability
-% For the TH case
-
-pxlsize=5;
-
-heigth=round((max(all_locs(:,2))-min(all_locs(:,2)))/pxlsize);
-width=round((max(all_locs(:,1))-min(all_locs(:,1)))/pxlsize);
-
-% Generate the 2D Histogram for the thresholded data TH
-
-imTHMerging = hist3([all_locs(:,1),all_locs(:,2)],[width heigth]); 
-
-% Find the pixel for each localization
-
-bin=[];
-
-for i=1:length(all_locs); % for all molecules, find x and y pixel position
-    
-%     bin(i,1) = ceil(all_locs(i,1)/pxlsize)-ceil(min(all_locs(:,1))/pxlsize);
-      bin(i,1) = round((all_locs(i,1)/pxlsize)-(min(all_locs(:,1))/pxlsize));
-    
-    if bin(i,1) == 0;
-       bin(i,1) = 1;
-    else end
-    
-    
-%     bin(i,2) = round(all_locs(i,2)/pxlsize)-ceil(min(all_locs(:,2))/pxlsize);
-      bin(i,2) = round((all_locs(i,2)/pxlsize)-(min(all_locs(:,2))/pxlsize));
-    
-     if bin(i,2) == 0;
-       bin(i,2)=1;
-    else end
-    
-    bin(i,3) = all_locs(i,3);%*all_locs(i,4); % Photons * Probability
-    
-end
-
-% Calculate the number of photons in each pixel
-
-newImage=[];
-
-for i = 1:max(bin(:,1));
-    
-    for j = 1:max(bin(:,2));
-    
-    target=find(bin(:,1)==i & bin(:,2)==j);
-    
-    newImage(i,j)=sum(bin(target,3));
-    
-    end
-    
-end    
-
-
-imTHMerging2 = times(imTHMerging, newImage);
-
 %% Determine the bin for each localization and wheight the pixel acc to the probability
 % For the Samrt Merged case
 
 pxlsize = 5;
 
-heigth=round((max(merged(:,2))-min(merged(:,2)))/pxlsize);
-width=round((max(merged(:,1))-min(merged(:,1)))/pxlsize);
+heigth = round((max(merged(:,2))-min(merged(:,2)))/pxlsize);
+width =  round((max(merged(:,1))-min(merged(:,1)))/pxlsize);
 
 % Generate the 2D Histogram for the smart merged data, before photon weighting
 
@@ -443,85 +321,92 @@ imWMerging2 = times(imWMerging, newImage2); % smart merged after photon weightin
 
 %% Calculate 2D Histogram
 
-Gfilter = 0.7;
+Gfilter = 1.5;
 
 % Apply Gaussian Filter to unmerged data
+
+heigth = round((max(pos_list(:,2))-min(pos_list(:,2)))/pxlsize);
+width  = round((max(pos_list(:,1))-min(pos_list(:,1)))/pxlsize);
+
 imUnmerged = hist3([pos_list(:,1),pos_list(:,2)],[width heigth]); 
 imUnmerged_G = imgaussfilt(imUnmerged,Gfilter);
-
-% Apply Gaussian filter to TH 2D histogram (TH before)
-imTHMerging_G = imgaussfilt(imTHMerging,Gfilter);
-
-% Apply Gaussian Filter to weighted 2D histogram (TH after)
-imTHMerging2_G = imgaussfilt(imTHMerging2,Gfilter);
-
-% Apply Gaussian Filter to the smart merged  2D histogram (SM before)
-imWMerging_G = imgaussfilt(imWMerging,Gfilter);
 
 % Apply Gaussian Filter to the smart merged  2D histogram (SM after)
 imWMerging2_G = imgaussfilt(imWMerging2,Gfilter);
 
 % Apply Gaussian Filter to the direct merged 2D histogram 
+heigth = round((max(direct_merging(:,2))-min(direct_merging(:,2)))/pxlsize);
+width  = round((max(direct_merging(:,1))-min(direct_merging(:,1)))/pxlsize);
+
 dmerged = hist3([direct_merging(:,1),direct_merging(:,2)],[width heigth]); 
 dmerged_G = imgaussfilt(dmerged,Gfilter);
 
 % Show 2D 
 
-figure%('Position',[100 400 1000 600])
+figure
 h=gcf;
 set(h,'PaperPositionMode','auto');         
 set(h,'PaperOrientation','landscape');
 set(h,'Position',[100 400 1500 150]);
 
-subplot(2,3,1)
+subplot(1,3,1)
 imagesc(imrotate(imUnmerged_G,90));
 title('unmerged')
 colormap('hot');
 axis off
 
-subplot(2,3,2)
-imagesc(imrotate(imTHMerging_G,90))
-title('merged with TH')
-colormap('hot');
-axis off
-
-subplot(2,3,3)
-imagesc(imrotate(imTHMerging2_G,90));
-title('merged with TH + weighting')
-colormap('hot');% colorbar;
-axis off
-
-subplot(2,3,4)
-imagesc(imrotate(imWMerging_G,90));
-title('weighted merging')
-colormap('hot'); %colorbar;
-axis off
-
-subplot(2,3,5)
-imagesc(imrotate(imWMerging2_G,90));
-title('weighted merging + weighting')
-colormap('hot'); %colorbar;
-axis off
-
-subplot(2,3,6)
+subplot(1,3,2)
 imagesc(imrotate(dmerged_G,90));
 title('direct merged')
 colormap('hot'); %colorbar;
 axis off
 
-%% Write
-imwrite(imWMerging2_G,'imWMerging2_G.tiff');
-imwrite(imTHMerging2_G,'imTHMerging2_G.tiff');
+subplot(1,3,3)
+imagesc(imrotate(imWMerging2_G,90));
+title('smart merging + photon weighting')
+colormap('hot'); %colorbar;
+axis off
 
-%% Write 32-bit Files
-tic
-% % Write 32-bit file
+%% Write 8-bit tiff files
 
-% cd('Z:\Christian-Sieben\data_HTP\2016-02-18_Centriole_Nanobody\locResults\rendered_matlab');
+% suffix = 'real_MT_large_FOV_gap50';
+
+imwrite(imUnmerged_G,[suffix '_unmerged' num2str(pxlsize) 'nm_pxl_8bit.tiff']);
+imwrite(imWMerging2_G,[suffix '_smart_merged_' num2str(pxlsize) 'nm_pxl_8bit.tiff']);
+imwrite(dmerged_G,[suffix '_direct_merging' num2str(pxlsize) 'nm_pxl_8bit.tiff']);
+
+
+
+%% Write 32-bit File
+
+% suffix = 'real_MT_2_gap_50';
+
+I32=[];
+I32=uint32(imUnmerged_G);
+
+outputFileName1 = [suffix '_unmerged_' num2str(pxlsize) 'nm_pxl_32bit.tiff'];
+
+t = Tiff(outputFileName1,'w');
+
+tagstruct.ImageLength     = size(I32,1);
+tagstruct.ImageWidth      = size(I32,2);
+tagstruct.Photometric     = Tiff.Photometric.MinIsBlack;
+tagstruct.BitsPerSample   = 32;
+tagstruct.SamplesPerPixel = 1;
+tagstruct.RowsPerStrip    = 16;
+tagstruct.PlanarConfiguration = Tiff.PlanarConfiguration.Chunky;
+tagstruct.Software        = 'MATLAB';
+t.setTag(tagstruct)
+
+t.write(I32);
+t.close();
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 I32=[];
 I32=uint32(imWMerging2_G);
 
-outputFileName1 = ['Norm_Merged_Gaussian' num2str(pxlsize) 'nm_pxl_32bit.tiff'];
+outputFileName1 = [suffix '_smart_merged_' num2str(pxlsize) 'nm_pxl_32bit.tiff'];
 
 t = Tiff(outputFileName1,'w');
 
@@ -538,12 +423,12 @@ t.setTag(tagstruct)
 t.write(I32);
 t.close();
 
-%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 I32=[];
-I32=uint32(imWMerging2);
+I32=uint32(dmerged_G);
 
-outputFileName1 = ['Smart_Merged_' num2str(pxlsize) 'nm_pxl_32bit.tiff'];
+outputFileName1 = [suffix '_direct_merging_' num2str(pxlsize) 'nm_pxl_32bit.tiff'];
 
 t = Tiff(outputFileName1,'w');
 
@@ -560,7 +445,7 @@ t.setTag(tagstruct)
 t.write(I32);
 t.close();
 
-fprintf(' -- Images saved (%f sec) -- \n',toc)
+fprintf(' -- Images saved -- \n')
 
 
 
