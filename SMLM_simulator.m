@@ -70,7 +70,7 @@ axis square;
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-labelling_eff = 0.6;
+labelling_eff = 0.3;
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -85,7 +85,7 @@ mol_list2 = mol_list(r,1:end);
 
 figure
 scatter(mol_list(:,1),mol_list(:,2),5,'*r'); hold on;
-scatter(mol_list2(:,1),mol_list2(:,2),5,'ob');
+scatter(mol_list2(:,1),mol_list2(:,2),5,'ob','filled');
 axis([0 1000 -50 100]);
 legend('all molecules','labeled molecules');
 box on;

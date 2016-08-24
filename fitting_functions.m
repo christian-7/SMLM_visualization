@@ -11,7 +11,7 @@ y2 = gap_fit_exp(x2);
 figure('Position',[100 200 800 300])
 
 subplot(1,2,1)
-scatter(x1,y1,4,'b','filled')
+scatter(x1,y1,20,'black','filled')
 title('Localization precision');
 xlabel('nm');
 ylabel('probability');
@@ -20,7 +20,9 @@ axis square
 
 
 subplot(1,2,2)
-scatter(x2,y2,10,'b','filled')
+scatter(x2,y2/max(y2),20,'black','filled');hold on;
+plot(x2,y2/max(y2))
+axis([0 100 0 1])
 title('Dark time');
 xlabel('frames');
 ylabel('probability');

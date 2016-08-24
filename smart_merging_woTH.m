@@ -1,15 +1,16 @@
 clc, clear, close all
 
 %% Load Data
-
+% 
 cd('.\simulated_test_data'); 
-peaks = dlmread('suresim_1localizations.txt',' ',1,0);
+peaks = dlmread('newCentLocalizations.txt',' ',1,0);
 xCol = 1;
 yCol = 2;
 frameCol = 4;
 photonsCol = 5;
 
 % cd('.\simulated_test_data'); 
+% load('simulated_MT_3D_radius_20nm_015_wGT.mat');
 % peaks = sim_line;
 % xCol = 1;
 % yCol = 2;
@@ -25,8 +26,16 @@ photonsCol = 5;
 % frameCol = 4;%5
 % photonsCol = 6;%6
 
-suffix = 'sureSim_1';
+% cd('.\test_data'); 
+% load('subset_for_smart_merging.mat')
+% peaks = subset2;
+% xCol = 1;%2
+% yCol = 2;%3
+% frameCol = 4;%5
+% photonsCol = 6;%6
+% clear subset2
 
+suffix = 'newCent_long';
 
 % filename_peaks2=[filename_peaks '.dat'];
 % peaks=dlmread(filename_peaks2,',',1,0);
@@ -44,28 +53,32 @@ cd('..\')
 
 fprintf('\n -- Data Loaded --\n')
 
+
+peaks(:,1)=peaks(:,1)+300;
+peaks(:,2)=peaks(:,2)+300;
 %% ROI
 % 
-% xmin=1.92*1e4;
-% xmax=2.0*1e4;
+% xmin=3.2*1e4;
+% xmax=3.5*1e4;
 % 
-% ymin=8.0*1e4;
-% ymax=8.06*1e4;
+% ymin=1.9*1e4;
+% ymax=2.1*1e4;
 % 
 % 
-% vx=find(peaks(:,x)>xmin & peaks(:,x)<xmax);
+% vx=find(peaks(:,xCol)>xmin & peaks(:,xCol)<xmax);
 % subset1=peaks(vx,1:end);
-% vy=find(subset1(:,y)>ymin & subset1(:,y)<ymax);
+% vy=find(subset1(:,yCol)>ymin & subset1(:,yCol)<ymax);
 % subset2=subset1(vy,1:end);
 % 
 % figure
 % % scatter(subset2(:,x),subset2(:,y),1,subset2(:,frame),'filled')
-% scatter(subset2(:,x),subset2(:,y),3,'filled');
-% xlabel('X (nm)');
-% ylabel('X (nm)');
+% scatter(subset2(:,xCol)-min(subset2(:,xCol)),subset2(:,yCol)-min(subset2(:,yCol)),3,'filled');
+% xlabel('nm');
+% ylabel('nm');
 % box on;
+% axis square
 % 
-% length(subset2);
+% peaks = subset2;
 
 %% Create input for the tracker
 
@@ -80,7 +93,7 @@ pos_list(:,4)=peaks(:,frameCol);               % dt in frames
 %% Track unsing the Crocker, Weeks, and Grier Algorithm (http://www.physics.emory.edu/rweeks/idl/index.html)
 tic
 
-max_disp    = 15;           % in unit of data, 15
+max_disp    = 10;           % in unit of data, 15
 min_pos     = 1;            % good - eliminate if fewer than good valid positions
 gap         = 50;          % mem - number of time steps that a particle can be 'lost' and then recovered again, 100
 quiet       = 1;            % quiet - 1 = no text
@@ -193,22 +206,40 @@ fprintf('\n -- Probability assigned --\n')
 
 
 
-figure ('Position',[100 500 900 300])
+% figure ('Position',[100 500 300 300])
+% 
+% % subplot(1,2,1)
+% hist(res(:,8)/max(res(:,8)),10,'black');
+% % title('Total probability');
+% xlabel('probability');
+% ylabel('counts');
+% axis square
+% %% 
+% 
+% figure ('Position',[100 500 500 300])
+% 
+% % subplot(1,2,2)
+% scatter(res(:,1),res(:,2),15,(res(:,8)/max(res(:,8))),'filled','s')
+% % axis([0 1000 -50 100])
+% colorbar
+% box on
+% xlabel('x (nm)');
+% ylabel('y (nm)');  
+% 
+% %% 
+% 
+% i=33;
+% 
+% vx=find(res(:,5)==i);       % find the i-th track 
+% 
+% track=res(vx,1:end);        % single track
+% 
+% figure
+% scatter(track(:,1),track(:,2),15,(track(:,8)/max(track(:,8))),'filled','s')
+% axis square
 
-subplot(1,2,1)
-hist(res(:,8)/max(res(:,8)),10);
-title('Total probability');
-xlabel('probability');
-ylabel('counts');
-axis square
 
-subplot(1,2,2)
-scatter(res(:,1),res(:,2),5,res(:,8)/max(res(:,8)),'filled')
-% axis([0 1000 -50 100])
-colorbar
-box on
-xlabel('x (nm)');
-ylabel('y (nm)');  
+
 
 %% Weighted Merging according to the probability
 
