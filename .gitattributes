@@ -1,2 +1,3 @@
 *.mat -crlf -diff -merge
 *.asv -crlf -diff -merge
+*.txt -crlf -diff -merge
