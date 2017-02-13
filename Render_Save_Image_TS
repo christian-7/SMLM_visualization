@@ -1,0 +1,110 @@
+clear, clc, close all
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+savename   = 'Cos7_PCSIR_bTub_10ms_PBS_1';
+savepath   = 'Z:\Christian-Sieben\data_HTP\2016-06-29_PC_SIR_Cos7\locResults\Cos7_PCSIR_bTub_10ms_PBS_1';
+
+locpath     = 'Z:\Christian-Sieben\data_HTP\2016-06-29_PC_SIR_Cos7\locResults\Cos7_PCSIR_Actin_10ms__1';
+locname     = 'Cos7_PCSIR_Actin_10ms__1_MMStack_Pos0_locResults_cleaned.dat';
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+cd(locpath);
+locs        = dlmread(locname,',',1,0);
+
+file = fopen(locname);
+line = fgetl(file);
+h = regexp( line, ',', 'split' );
+
+x = strmatch('x [nm]',h);
+y = strmatch('y [nm]',h);
+framesCol = strmatch('frame',h);
+LLCol = strmatch('loglikelihood',h);
+photonsCol = strmatch('intensity [photon]',h);
+sigmaCol = strmatch('sigma [nm]',h);
+uncertaintyCol = strmatch('uncertainty [nm]',h);
+
+fprintf('\n -- Data Loaded --\n')
+
+%% Show filtering parameters
+
+close all;
+
+figure('Position',[1000 300 700 700]); 
+subplot(2,2,1);
+hist(locs(:,photonsCol),50);
+title('Photons');
+subplot(2,2,2);
+hist(locs(:,sigmaCol),50);
+title('Sigma');
+subplot(2,2,3);
+hist(locs(locs(:,LLCol)<300,LLCol),50);
+title('LL');
+subplot(2,2,4);
+hist(locs(locs(:,uncertaintyCol)<100,uncertaintyCol),50);
+title('Uncertainty');
+
+%% Choose and apply the filter parameters
+
+close all
+
+% Set Filter parameters 
+
+minFrame            = 2000;
+maxLL               = 100;
+MinPhotons          = 200;
+Minsigma            = 100; 
+Maxsigma            = 150;
+Maxuncertainty      = 40;
+
+filter   = find(locs(:,sigmaCol) < Maxsigma & locs(:,sigmaCol) > Minsigma & locs(:,photonsCol) > MinPhotons & locs(:,uncertaintyCol) < Maxuncertainty & locs(:,framesCol) > minFrame );
+
+subsetLL = locs(filter,1:end);
+
+fprintf('\n -- Data Filtered %f of the locs are left --\n', ((length(subsetLL)/length(locs))));
+
+%% Calculate and show 2D histogram 
+
+pxlsize = 10;
+
+heigth  = round((max(subsetLL(:,y))-min(subsetLL(:,y)))/pxlsize);
+width   = round((max(subsetLL(:,x))-min(subsetLL(:,x)))/pxlsize);
+
+im = hist3([subsetLL(:,y),subsetLL(:,x)],[heigth width]);
+
+imG = imgaussfilt(im, pxlsize/10);
+
+figure
+imshow(imG,[0.3 5]);
+title('Gaussian Filtered')
+colormap('hot');
+
+%% Save 32-bit image
+
+cd(savepath)
+
+name = [savename '_rendered_' num2str(pxlsize) 'nm_per_pxl.tiff'];  
+
+I32=[];
+I32=uint32(imG);
+
+t = Tiff(name,'w');
+
+tagstruct.ImageLength     = size(I32,1);
+tagstruct.ImageWidth      = size(I32,2);
+tagstruct.Photometric     = Tiff.Photometric.MinIsBlack;
+tagstruct.BitsPerSample   = 32;
+tagstruct.SamplesPerPixel = 1;
+tagstruct.RowsPerStrip    = 16;
+tagstruct.PlanarConfiguration = Tiff.PlanarConfiguration.Chunky;
+tagstruct.Software        = 'MATLAB';
+t.setTag(tagstruct)
+
+t.write(I32);
+t.close()
+
+
+cd(locpath);
+
+fprintf('\n -- Image saved --\n');
+
